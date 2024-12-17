@@ -15,12 +15,13 @@ vertices = np.array([
     [3, 1.25, 0], [3, 1.75, 0], [3, 1.75, 1], [3, 1.25, 1],
 ])
 
-# Грани буквы "Н"
+#Грани
 faces = [
     [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [0, 1, 2, 3], [4, 5, 6, 7],
     [8, 9, 13, 12], [9, 10, 14, 13], [10, 11, 15, 14], [11, 8, 12, 15], [8, 9, 10, 11], [12, 13, 14, 15],
     [16, 17, 21, 20], [17, 18, 22, 21], [18, 19, 23, 22], [19, 16, 20, 23], [16, 17, 18, 19], [20, 21, 22, 23]
 ]
+
 
 # Изначально объект не трансформирован
 transformed_vertices = vertices.copy()
@@ -29,9 +30,9 @@ transformation_matrix = np.eye(4)  # Единичная матрица 4x4
 def plot_3d_object(ax, vertices, faces, title="3D Object"):
     """Отрисовка 3D объекта (с учетом 2D-проекции)."""
     ax.clear()
-    if vertices.shape[1] == 2:  # Для проекции 2D
+    if vertices.shape[1] == 2:  #2D
         ax.plot(vertices[:, 0], vertices[:, 1], 'bo-', markersize=4)  # Рисуем точки
-    else:  # Для 3D
+    else:  #3D
         for face in faces:
             poly = vertices[face]
             ax.add_collection3d(Poly3DCollection([poly], alpha=0.5, edgecolor='k'))
@@ -39,9 +40,9 @@ def plot_3d_object(ax, vertices, faces, title="3D Object"):
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    ax.set_xlim([-5, 10])
-    ax.set_ylim([-5, 10])
-    ax.set_zlim([-5, 5])
+    ax.set_xlim([-7, 8])
+    ax.set_ylim([-7, 8])
+    ax.set_zlim([-7, 7])
 
 
 def update_matrix_display(ax, matrix):
@@ -51,8 +52,8 @@ def update_matrix_display(ax, matrix):
     matrix_text = '\n'.join([' '.join([f"{value:.2f}" for value in row]) for row in matrix])
     
     # Используем панель для отображения матрицы
-    ax.add_patch(plt.Rectangle((0, 0), 1, 1, color='lightgray', lw=2, edgecolor='black'))
-    ax.text(0.5, 0.5, matrix_text, fontsize=12, va='center', ha='center', transform=ax.transAxes)
+    ax.add_patch(plt.Rectangle((0.0, 0.6), 1, 1, color='lightgray', lw=2, edgecolor='black'))
+    ax.text(0.5, 0.8, matrix_text, fontsize=22, va='center', ha='center', transform=ax.transAxes)
     ax.set_title("Transformation Matrix")
 
 def apply_transformation(vertices, matrix):
@@ -118,15 +119,14 @@ def project(vertices, plane='Oxy'):
         return vertices[:, 1:]  # Оставляем только Y и Z
 
 def on_key(event):
-    """Обработчик нажатий клавиш."""
     global transformed_vertices
-    if event.key == 'up':  # Вверх (стрелочка)
+    if event.key == 'up':
         transformed_vertices = translate(transformed_vertices, 0, 1, 0)
-    elif event.key == 'down':  # Вниз (стрелочка)
+    elif event.key == 'down':
         transformed_vertices = translate(transformed_vertices, 0, -1, 0)
-    elif event.key == 'left':  # Влево (стрелочка)
+    elif event.key == 'left': 
         transformed_vertices = translate(transformed_vertices, -1, 0, 0)
-    elif event.key == 'right':  # Вправо (стрелочка)
+    elif event.key == 'right':
         transformed_vertices = translate(transformed_vertices, 1, 0, 0)
     elif event.key == 'r':  # Вращение по часовой стрелке вокруг Z
         transformed_vertices = rotate(transformed_vertices, -np.pi / 18, 'z')
@@ -140,54 +140,63 @@ def on_key(event):
         transformed_vertices = rotate(transformed_vertices, np.pi / 18, 'y')
     elif event.key == 'v':  # Вращение по часовой стрелке вокруг Y
         transformed_vertices = rotate(transformed_vertices, -np.pi / 18, 'y')
-    elif event.key == 'w':  # Масштабирование (увеличение)
+    elif event.key == '=':  # увеличение
         transformed_vertices = scale(transformed_vertices, 1.1, 1.1, 1.1)
-    elif event.key == 's':  # Масштабирование (уменьшение)
+    elif event.key == '-':  # уменьшение
         transformed_vertices = scale(transformed_vertices, 0.9, 0.9, 0.9)
 
-    # Обновить отображение
     plot_3d_object(ax, transformed_vertices, faces)
     update_matrix_display(matrix_ax, transformation_matrix)
     plt.draw()
 
 def on_projection_key(event):
-    """Обработчик нажатий для проекций."""
+    """Обработчик нажатий для отображения проекций."""
     global transformed_vertices
-    if event.key == '1':
-        projected = project(transformed_vertices, plane='Oxy')
-        plot_3d_object(ax, projected, faces)
-    elif event.key == '2':
-        projected = project(transformed_vertices, plane='Oxz')
-        plot_3d_object(ax, projected, faces)
-    elif event.key == '3':
-        projected = project(transformed_vertices, plane='Oyz')
-        plot_3d_object(ax, projected, faces)
 
-# Создание интерфейса
+    if event.key in ['1', '2', '3']:
+        plane = {'1': 'Oxy', '2': 'Oxz', '3': 'Oyz'}[event.key]
+        
+        projected = project(transformed_vertices, plane=plane)
+        
+        projection_fig, projection_ax = plt.subplots(figsize=(6, 6))
+        projection_ax.set_aspect('equal', adjustable='datalim')
+        
+        projection_ax.plot(projected[:, 0], projected[:, 1], 'bo-', markersize=4, label=f"Projection on {plane}")
+        
+        if plane == 'Oxy':
+            projection_ax.set_xlabel('X')
+            projection_ax.set_ylabel('Y')
+        elif plane == 'Oxz':
+            projection_ax.set_xlabel('X')
+            projection_ax.set_ylabel('Z')
+        elif plane == 'Oyz':
+            projection_ax.set_xlabel('Y')
+            projection_ax.set_ylabel('Z')
+
+        projection_ax.set_title(f"Projection on {plane}")
+        projection_ax.legend()
+        projection_ax.grid(True)
+
+        plt.show()
+
+
 fig = plt.figure(figsize=(12, 6))
-ax = fig.add_subplot(121, projection='3d')  # График 3D объекта
-matrix_ax = fig.add_subplot(122)  # Отображение матрицы
+ax = fig.add_subplot(121, projection='3d')
+matrix_ax = fig.add_subplot(122)
 
-# Построить начальное состояние
 plot_3d_object(ax, transformed_vertices, faces)
 update_matrix_display(matrix_ax, transformation_matrix)
 
-# Добавление графического поля с текстом инструкций
-instructions_ax = fig.add_axes([0.7, 0.1, 0.28, 0.3], frameon=False)
+instructions_ax = fig.add_axes([0.55, 0.1, 0.38, 0.3])
 instructions_ax.add_patch(plt.Rectangle((0, 0), 1, 1, color='lightblue', lw=2, edgecolor='black'))
+instructions_ax.axis('off')
 instructions_ax.text(0.5, 0.5, """
 Стрелочки:
-  Вверх - переместить вверх
-  Вниз - переместить вниз
-  Влево - переместить влево
-  Вправо - переместить вправо
-
+перемещение в плоскости Oxy
 r, t, z, x, c, v: вращение
-
-w, s: масштабирование
-
++, -: увеличение/уменьшение объекта
 1, 2, 3: проекции
-""", ha='center', va='center', fontsize=12)
+""", ha='center', va='center', fontsize=16)
 
 # Привязка событий
 fig.canvas.mpl_connect('key_press_event', on_key)
