@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
-# Вершины буквы "Н"
+#буква "Н"
 vertices = np.array([
     # Левая стойка
     [0, 0, 0], [0, 3, 0], [0, 3, 1], [0, 0, 1],
@@ -15,60 +15,88 @@ vertices = np.array([
     [3, 1.25, 0], [3, 1.75, 0], [3, 1.75, 1], [3, 1.25, 1],
 ])
 
-#Грани
-faces = [
-    [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7], [0, 1, 2, 3], [4, 5, 6, 7],
-    [8, 9, 13, 12], [9, 10, 14, 13], [10, 11, 15, 14], [11, 8, 12, 15], [8, 9, 10, 11], [12, 13, 14, 15],
-    [16, 17, 21, 20], [17, 18, 22, 21], [18, 19, 23, 22], [19, 16, 20, 23], [16, 17, 18, 19], [20, 21, 22, 23]
+edges = [
+    # Левая стойка
+    (0, 1), (1, 2), (2, 3), (3, 0),
+    (4, 5), (5, 6), (6, 7), (7, 4),
+    (0, 4), (1, 5), (2, 6), (3, 7),
+    # Правая стойка
+    (8, 9), (9, 10), (10, 11), (11, 8),
+    (12, 13), (13, 14), (14, 15), (15, 12),
+    (8, 12), (9, 13), (10, 14), (11, 15),
+    # Перекладина
+    (16, 17), (17, 18), (18, 19), (19, 16),
+    (20, 21), (21, 22), (22, 23), (23, 20),
+    (16, 20), (17, 21), (18, 22), (19, 23)
 ]
 
-
-# Изначально объект не трансформирован
-transformed_vertices = vertices.copy()
-transformation_matrix = np.eye(4)  # Единичная матрица 4x4
-
-def plot_3d_object(ax, vertices, faces, title="3D Object"):
-    """Отрисовка 3D объекта (с учетом 2D-проекции)."""
+def plot_3d_wireframe(ax, vertices, edges, title=""):
+    """Отрисовка 3D объекта"""
     ax.clear()
-    if vertices.shape[1] == 2:  #2D
-        ax.plot(vertices[:, 0], vertices[:, 1], 'bo-', markersize=4)  # Рисуем точки
-    else:  #3D
-        for face in faces:
-            poly = vertices[face]
-            ax.add_collection3d(Poly3DCollection([poly], alpha=0.5, edgecolor='k'))
+    lines = [(vertices[start], vertices[end]) for start, end in edges]
+    lc = Line3DCollection(lines, colors='k', linewidths=2)
+    ax.add_collection3d(lc)
+    ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2], color='r', s=20)
+
     ax.set_title(title)
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    ax.set_xlim([-7, 8])
-    ax.set_ylim([-7, 8])
-    ax.set_zlim([-7, 7])
+    ax.set_xlim([-5, 7])
+    ax.set_ylim([-5, 7])
+    ax.set_zlim([-5, 7])
 
+    transformation_text = "Transformation Matrix:\n" + "\n".join([" ".join(f"{val:.2f}" for val in row) for row in transformation_matrix])
+    ax.text2D(1.4, 1, transformation_text, transform=ax.transAxes, fontsize=20, verticalalignment='center')
 
-def update_matrix_display(ax, matrix):
-    """Обновить отображение матрицы на экране."""
-    ax.clear()
-    ax.axis('off')
-    matrix_text = '\n'.join([' '.join([f"{value:.2f}" for value in row]) for row in matrix])
-    
-    # Используем панель для отображения матрицы
-    ax.add_patch(plt.Rectangle((0.0, 0.6), 1, 1, color='lightgray', lw=2, edgecolor='black'))
-    ax.text(0.5, 0.8, matrix_text, fontsize=22, va='center', ha='center', transform=ax.transAxes)
-    ax.set_title("Transformation Matrix")
+def plot_projection(vertices, plane, title):
+    """Отрисовка проекции"""
+    fig, ax = plt.subplots()
+    if plane == 'Oxy':
+        ax.scatter(vertices[:, 0], vertices[:, 1], c='r')
+        for start, end in edges:
+            x = [vertices[start, 0], vertices[end, 0]]
+            y = [vertices[start, 1], vertices[end, 1]]
+            ax.plot(x, y, 'k')
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+    elif plane == 'Oxz':
+        ax.scatter(vertices[:, 0], vertices[:, 2], c='r')
+        for start, end in edges:
+            x = [vertices[start, 0], vertices[end, 0]]
+            z = [vertices[start, 2], vertices[end, 2]]
+            ax.plot(x, z, 'k')
+        ax.set_xlabel('X')
+        ax.set_ylabel('Z')
+    elif plane == 'Oyz':
+        ax.scatter(vertices[:, 1], vertices[:, 2], c='r')
+        for start, end in edges:
+            y = [vertices[start, 1], vertices[end, 1]]
+            z = [vertices[start, 2], vertices[end, 2]]
+            ax.plot(y, z, 'k')
+        ax.set_xlabel('Y')
+        ax.set_ylabel('Z')
+
+    ax.set_title(title)
+    ax.grid(True)
+    plt.show()
+
+transformed_vertices = vertices.copy()
+transformation_matrix = np.eye(4)
 
 def apply_transformation(vertices, matrix):
-    """Применить трансформацию к вершинам."""
+    """Применить трансформацию к вершинам"""
     homogenous = np.hstack((vertices, np.ones((vertices.shape[0], 1))))  # Однородные координаты
     transformed = homogenous @ matrix.T
     return transformed[:, :3]
 
 def update_matrix(new_matrix):
-    """Обновить глобальную матрицу трансформации."""
+    """Обновить глобальную матрицу трансформации"""
     global transformation_matrix
     transformation_matrix = new_matrix @ transformation_matrix
 
 def translate(vertices, dx, dy, dz):
-    """Перенос."""
+    """Перенос"""
     matrix = np.array([[1, 0, 0, dx],
                        [0, 1, 0, dy],
                        [0, 0, 1, dz],
@@ -77,7 +105,7 @@ def translate(vertices, dx, dy, dz):
     return apply_transformation(vertices, matrix)
 
 def rotate(vertices, angle, axis):
-    """Вращение вокруг оси."""
+    """Вращение вокруг оси"""
     c, s = np.cos(angle), np.sin(angle)
     if axis == 'x':
         matrix = np.array([[1, 0, 0, 0],
@@ -106,17 +134,6 @@ def scale(vertices, sx, sy, sz):
     update_matrix(matrix)
     return apply_transformation(vertices, matrix)
 
-def project(vertices, plane='Oxy'):
-    """Проекция на плоскость."""
-    if plane == 'Oxy':
-        # Проекция на плоскость Oxy, где координаты Z игнорируются
-        return vertices[:, :2]  # Оставляем только X и Y
-    elif plane == 'Oxz':
-        # Проекция на плоскость Oxz, где координаты Y игнорируются
-        return vertices[:, [0, 2]]  # Оставляем только X и Z
-    elif plane == 'Oyz':
-        # Проекция на плоскость Oyz, где координаты X игнорируются
-        return vertices[:, 1:]  # Оставляем только Y и Z
 
 def on_key(event):
     global transformed_vertices
@@ -128,6 +145,10 @@ def on_key(event):
         transformed_vertices = translate(transformed_vertices, -1, 0, 0)
     elif event.key == 'right':
         transformed_vertices = translate(transformed_vertices, 1, 0, 0)
+    elif event.key == '.':
+        transformed_vertices = translate(transformed_vertices, 0, 0 ,1)
+    elif event.key == ',':
+        transformed_vertices = translate(transformed_vertices, 0, 0 ,-1)
     elif event.key == 'r':  # Вращение по часовой стрелке вокруг Z
         transformed_vertices = rotate(transformed_vertices, -np.pi / 18, 'z')
     elif event.key == 't':  # Вращение против часовой стрелки вокруг Z
@@ -140,66 +161,41 @@ def on_key(event):
         transformed_vertices = rotate(transformed_vertices, np.pi / 18, 'y')
     elif event.key == 'v':  # Вращение по часовой стрелке вокруг Y
         transformed_vertices = rotate(transformed_vertices, -np.pi / 18, 'y')
-    elif event.key == '=':  # увеличение
+    elif event.key == '=':
         transformed_vertices = scale(transformed_vertices, 1.1, 1.1, 1.1)
-    elif event.key == '-':  # уменьшение
+    elif event.key == '-':
         transformed_vertices = scale(transformed_vertices, 0.9, 0.9, 0.9)
+    elif event.key == '1':
+        plot_projection(transformed_vertices, 'Oxy', 'Projection on Oxy')
+    elif event.key == '2':
+        plot_projection(transformed_vertices, 'Oxz', 'Projection on Oxz')
+    elif event.key == '3':
+        plot_projection(transformed_vertices, 'Oyz', 'Projection on Oyz')
 
-    plot_3d_object(ax, transformed_vertices, faces)
-    update_matrix_display(matrix_ax, transformation_matrix)
+    plot_3d_wireframe(ax, transformed_vertices, edges)
+    transformation_text = "Transformation Matrix:\n" + "\n".join([" ".join(f"{val:.2f}" for val in row) for row in transformation_matrix])
+    ax.text2D(1.4, 1, transformation_text, transform=ax.transAxes, fontsize=20, verticalalignment='center')
     plt.draw()
 
-def on_projection_key(event):
-    """Обработчик нажатий для отображения проекций."""
-    global transformed_vertices
-
-    if event.key in ['1', '2', '3']:
-        plane = {'1': 'Oxy', '2': 'Oxz', '3': 'Oyz'}[event.key]
-        
-        projected = project(transformed_vertices, plane=plane)
-        
-        projection_fig, projection_ax = plt.subplots(figsize=(6, 6))
-        projection_ax.set_aspect('equal', adjustable='datalim')
-        
-        projection_ax.plot(projected[:, 0], projected[:, 1], 'bo-', markersize=4, label=f"Projection on {plane}")
-        
-        if plane == 'Oxy':
-            projection_ax.set_xlabel('X')
-            projection_ax.set_ylabel('Y')
-        elif plane == 'Oxz':
-            projection_ax.set_xlabel('X')
-            projection_ax.set_ylabel('Z')
-        elif plane == 'Oyz':
-            projection_ax.set_xlabel('Y')
-            projection_ax.set_ylabel('Z')
-
-        projection_ax.set_title(f"Projection on {plane}")
-        projection_ax.legend()
-        projection_ax.grid(True)
-
-        plt.show()
-
-
-fig = plt.figure(figsize=(12, 6))
+fig = plt.figure(figsize=(12, 8))
 ax = fig.add_subplot(121, projection='3d')
-matrix_ax = fig.add_subplot(122)
-
-plot_3d_object(ax, transformed_vertices, faces)
-update_matrix_display(matrix_ax, transformation_matrix)
 
 instructions_ax = fig.add_axes([0.55, 0.1, 0.38, 0.3])
 instructions_ax.add_patch(plt.Rectangle((0, 0), 1, 1, color='lightblue', lw=2, edgecolor='black'))
 instructions_ax.axis('off')
 instructions_ax.text(0.5, 0.5, """
-Стрелочки:
-перемещение в плоскости Oxy
-r, t, z, x, c, v: вращение
+Перемещение по x: ←/→
+Перемещение по y: ↑/↓
+Перемещение по z: ,/.
+Вращение:
+Вокруг Z: r,t
+Вокруг X: z,x
+Вокруг Y: c,v
 +, -: увеличение/уменьшение объекта
 1, 2, 3: проекции
 """, ha='center', va='center', fontsize=16)
 
-# Привязка событий
-fig.canvas.mpl_connect('key_press_event', on_key)
-fig.canvas.mpl_connect('key_press_event', on_projection_key)
+plot_3d_wireframe(ax, transformed_vertices, edges)
 
+fig.canvas.mpl_connect('key_press_event', on_key)
 plt.show()
